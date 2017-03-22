@@ -102,10 +102,6 @@ static const struct { uint32_t height; const char *hash; uint32_t timestamp; uin
     { 443520, "00000000000000000345d0c7890b2c81ab5139c6e83400e5bed00d23a1f8d239", 1481765313, 0x18038b85 }
 };
 
-static const char *dns_seeds[] = {
-    "seed.breadwallet.com.", "seed.bitcoin.sipa.be.", "dnsseed.bluematt.me.", "dnsseed.bitcoin.dashjr.org.",
-    "seed.bitcoinstats.com.", "bitseed.xf2.org.", "seed.bitcoin.jonasschnelli.ch."
-};
 
 #endif
 
@@ -219,43 +215,41 @@ static const char *dns_seeds[] = {
         NSTimeInterval now = [NSDate timeIntervalSinceReferenceDate];
         NSMutableArray *peers = [NSMutableArray arrayWithObject:[NSMutableArray array]];
 
-        if (_peers.count < PEER_MAX_CONNECTIONS ||
-            ((BRPeer *)_peers[PEER_MAX_CONNECTIONS - 1]).timestamp + 3*24*60*60 < now) {
-            while (peers.count < sizeof(dns_seeds)/sizeof(*dns_seeds)) [peers addObject:[NSMutableArray array]];
-        }
+ 
         
         if (peers.count > 0) {
-            dispatch_apply(peers.count, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^(size_t i) {
-                NSString *servname = @(BITCOIN_STANDARD_PORT).stringValue;
-                struct addrinfo hints = { 0, AF_UNSPEC, SOCK_STREAM, 0, 0, 0, NULL, NULL }, *servinfo, *p;
-                UInt128 addr = { .u32 = { 0, 0, CFSwapInt32HostToBig(0xffff), 0 } };
-
-                NSLog(@"DNS lookup %s", dns_seeds[i]);
-                
-                if (getaddrinfo(dns_seeds[i], servname.UTF8String, &hints, &servinfo) == 0) {
-                    for (p = servinfo; p != NULL; p = p->ai_next) {
-                        if (p->ai_family == AF_INET) {
-                            addr.u64[0] = 0;
-                            addr.u32[2] = CFSwapInt32HostToBig(0xffff);
-                            addr.u32[3] = ((struct sockaddr_in *)p->ai_addr)->sin_addr.s_addr;
-                        }
-//                        else if (p->ai_family == AF_INET6) {
-//                            addr = *(UInt128 *)&((struct sockaddr_in6 *)p->ai_addr)->sin6_addr;
+//            dispatch_apply(peers.count, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^(size_t i) {
+//                NSString *servname = @(BITCOIN_STANDARD_PORT).stringValue;
+//                struct addrinfo hints = { 0, AF_UNSPEC, SOCK_STREAM, 0, 0, 0, NULL, NULL }, *servinfo, *p;
+//                UInt128 addr = { .u32 = { 0, 0, CFSwapInt32HostToBig(0xffff), 0 } };
+//
+//                NSLog(@"DNS lookup %s", dns_seeds[i]);
+//                
+//                if (getaddrinfo(dns_seeds[i], servname.UTF8String, &hints, &servinfo) == 0) {
+//                    for (p = servinfo; p != NULL; p = p->ai_next) {
+//                        if (p->ai_family == AF_INET) {
+//                            addr.u64[0] = 0;
+//                            addr.u32[2] = CFSwapInt32HostToBig(0xffff);
+//                            addr.u32[3] = ((struct sockaddr_in *)p->ai_addr)->sin_addr.s_addr;
+//                            printf("%llu", addr.u64[0]);
 //                        }
-                        else continue;
-                        
-                        uint16_t port = CFSwapInt16BigToHost(((struct sockaddr_in *)p->ai_addr)->sin_port);
-                        NSTimeInterval age = 3*24*60*60 + arc4random_uniform(4*24*60*60); // add between 3 and 7 days
-                    
-                        [peers[i] addObject:[[BRPeer alloc] initWithAddress:addr port:port
-                                             timestamp:(i > 0 ? now - age : now)
-                                             services:SERVICES_NODE_NETWORK | SERVICES_NODE_BLOOM]];
-                    }
-
-                    freeaddrinfo(servinfo);
-                }
-            });
-                        
+////                        else if (p->ai_family == AF_INET6) {
+////                            addr = *(UInt128 *)&((struct sockaddr_in6 *)p->ai_addr)->sin6_addr;
+////                        }
+//                        else continue;
+//                        
+//                        uint16_t port = CFSwapInt16BigToHost(((struct sockaddr_in *)p->ai_addr)->sin_port);
+//                        NSTimeInterval age = 3*24*60*60 + arc4random_uniform(4*24*60*60); // add between 3 and 7 days
+//                    
+//                        [peers[i] addObject:[[BRPeer alloc] initWithAddress:addr port:port
+//                                             timestamp:(i > 0 ? now - age : now)
+//                                             services:SERVICES_NODE_NETWORK | SERVICES_NODE_BLOOM]];
+//                    }
+//
+//                    freeaddrinfo(servinfo);
+//                }
+//            });
+            
             for (NSArray *a in peers) [_peers addObjectsFromArray:a];
 
 #if BITCOIN_TESTNET
